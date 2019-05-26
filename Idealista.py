@@ -1,7 +1,7 @@
-import pandas as pd
 import requests
 import base64
 import json
+import time
 
 
 class Idealista:
@@ -14,11 +14,10 @@ class Idealista:
     neighborhood = 'neighborhood'
     latitude = 'latitude'
     longitude = 'longitude'
-    distance = 'distance'
     priceByArea = 'priceByArea'
+    url = 'url'
+    address = 'address'
     neighborhoods = {}
-
-   
 
     def create(self):
         #Getting credentials
@@ -40,30 +39,18 @@ class Idealista:
         access_token = r.json()['access_token']
         token_type = r.json()['token_type']
         self.search_authorization =  token_type + ' ' + access_token
-        
 
-
-#    country = 'es'
-#    operation = 'rent'
-#    propertyType = 'homes' # 'bedrooms' is other option
-#    center = '41.38621,2.15487',
-#    locale = 'en'
-#    distance = 1300
-#    locationId = '0-EU-ES-28' # ver qu es esto
-#    maxItems = 50 # 50 as maximun allowed
-#    maxPrice = 1000
-
-
-    def request_idealista(self,locale, maxItems, center, distance, propertyType):
-
+    def request_idealista(self, property_type, min_price, max_price, num_page=1):
         params = {
-            'locale':locale,
-            'maxItems':maxItems,
+            'locationId':'0-EU-ES-08-13-001-019',
+            'locale':'en',
+            'maxItems':50,
             'operation':'rent',
-            'propertyType':propertyType,
+            'propertyType':property_type,
             'apikey':self.apikey,
-            'center' :center,
-            'distance' :distance
+            'minPrince':min_price,
+            'maxPrice':max_price,
+            'numPage':num_page
         }
         
         search = requests.post('https://api.idealista.com/3.5/es/search',
@@ -72,6 +59,15 @@ class Idealista:
         return search.json().get('elementList')
 
     
+    def load_homes(self, property_type='bedrooms', min_price=100, max_price=1500):
+        for i in range(1,3):
+            homes = self.request_idealista(property_type, min_price, max_price, i)
+            time.sleep(1)
+            for home in homes:
+                if self.neighborhood in home:
+                    self.add_item_to_dict(home)
+                
+                
     def add_item_to_dict(self,home):
         item = { self.price:home[self.price],
                 self.propertyType:home[self.propertyType],
@@ -79,8 +75,9 @@ class Idealista:
                 self.rooms:home[self.rooms],
                 self.latitude:home[self.latitude],
                 self.longitude:home[self.longitude],
-                self.distance:home[self.distance],
-                self.priceByArea:home[self.priceByArea]
+                self.priceByArea:home[self.priceByArea],
+                self.url:home[self.url]
+                self.address:home[self.url]
             }
 
         if home[self.neighborhood] not in self.neighborhoods:
@@ -88,17 +85,6 @@ class Idealista:
 
         self.neighborhoods[home[self.neighborhood]].append(item)
 
-
-    
-    def load_homes(self, center, distance, locale='en', maxItems=50):
-        homes = self.request_idealista(locale, maxItems, center, distance, 'homes')
-        bedrooms = self.request_idealista(locale, maxItems, center, distance, 'bedrooms')
-        for home in homes:
-            self.add_item_to_dict(home)
-        for bedroom in bedrooms:
-            self.add_item_to_dict(bedroom)
-
-            
     def price_of_neighborhoods(self):
         neighs_price = {}
         for key in self.neighborhoods.keys():
@@ -109,12 +95,7 @@ class Idealista:
         price_per_neighborhood = 0
         total_number_of_rooms = 0
         for appartment in self.neighborhoods[key]:
-            if appartment[self.propertyType] == 'room':
-                price_per_neighborhood += appartment[self.price]
-                total_number_of_rooms += 1
-            else:
-                number_of_rooms = appartment[self.rooms] if appartment[self.rooms] > 0 else 1
-                price_per_neighborhood += appartment[self.price] / number_of_rooms
-                total_number_of_rooms += appartment[self.rooms]
+            price_per_neighborhood += appartment[self.price]
+            total_number_of_rooms += 1
         return (price_per_neighborhood / len(self.neighborhoods[key]), total_number_of_rooms)
 
