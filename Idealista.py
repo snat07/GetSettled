@@ -2,7 +2,7 @@ import requests
 import base64
 import json
 import time
-
+import datetime
 
 class Idealista:
     
@@ -56,6 +56,9 @@ class Idealista:
         search = requests.post('https://api.idealista.com/3.5/es/search',
                           headers={'Authorization': self.search_authorization},
                           params=params)
+
+        with open(str(datetime.datetime.now().date()) + '_idealista_' + str(num_page) + '.json', 'w') as fp:
+            json.dump(search.json(), fp)
         return search.json().get('elementList')
 
     
@@ -76,8 +79,8 @@ class Idealista:
                 self.latitude:home[self.latitude],
                 self.longitude:home[self.longitude],
                 self.priceByArea:home[self.priceByArea],
-                self.url:home[self.url]
-                self.address:home[self.url]
+                self.url:home[self.url],
+                self.address:home[self.address]
             }
 
         if home[self.neighborhood] not in self.neighborhoods:
