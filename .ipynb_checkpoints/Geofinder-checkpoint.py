@@ -37,12 +37,12 @@ class Geofinder:
         self.export_coords_to_csv(pizza_coordinates)
         pizza_addresses = []
         for coord in pizza_coordinates:
-            pizza_addresses.append(self.osm.reverse(coord))
-            time.sleep(3)
+            pizza_addresses.append(self.here.reverse(coord))
+#             time.sleep(0)
         
         neighborhouds = []
         for suburb in pizza_addresses:
-            neighborhouds.append(suburb.raw['address']['suburb'])
+            neighborhouds.append(suburb.raw['Location']['Address']['District'])
 
         return Counter(neighborhouds).most_common()
 
