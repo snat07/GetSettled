@@ -1,9 +1,10 @@
 import pandas as pd
-import stringdist
 import telluric as tl
 from sklearn import preprocessing
 from Idealista import Idealista
 from Geofinder import Geofinder
+from Utils import *
+from Map import draw_map
 
 class Ranking:
 
@@ -11,7 +12,6 @@ class Ranking:
         self.distance_weight = 0
         self.availability_weight = 0
         self.security_weight = 0
-        self.fc = tl.FileCollection.open("../barris_geo.json")
         self.idealista = Idealista()
         self.geofinder = Geofinder()
     
@@ -25,12 +25,13 @@ class Ranking:
         self.security_weight = security_weight
 
         # Getting ranknings
-        self.get_distance_ranking(address, distance)
+        self.get_distance_ranking(address, distance*83)
         self.get_availability_ranking(min_price, max_price)
 
-        self.aliases = self.alias_dictionary([i[0] for i in self.distance_ranking],[i[0] for i in self.availability_ranking], 0.25)
+        self.aliases = alias_dictionary([i[0] for i in self.distance_ranking],[i[0] for i in self.availability_ranking], 0.25)
+        ranking = self.get_ranking_list(self.create_ranking_df(self.aliases), n_neighbourhood).index.values
 
-        return self.get_ranking_list(self.create_ranking_df(self.aliases), n_neighbourhood).index.values
+        return ranking
 
 
     def get_ranking_list(self, df, count=3):
@@ -62,21 +63,21 @@ class Ranking:
 
     def create_ranking_df(self, aliases):
         distance_values, available_values = self.get_ranking_values(aliases)
-        df = pd.DataFrame(distance_values, index=self.real_list(aliases), columns=['Distance'])
+        df = pd.DataFrame(distance_values, index=real_list(aliases), columns=['Distance'])
         df['Availability'] = available_values
         df['Security'] = self.get_security_ranking(aliases)
         return df
 
 
     def get_security_ranking(self, aliases):
-        security_df = pd.read_csv('security_ranking.csv', index_col='name_neighbourhood', usecols=['name_neighbourhood','zscore'])
-        sec_dic = self.alias_dictionary(self.real_list(aliases),list(security_df.index), 0.45)
-        return security_df.loc[self.alias_list(sec_dic)].values
+        security_df = pd.read_csv('security_ranking.csv', index_col='name_neighbourhood', usecols=['name_neighbourhood','overall_score'])
+        sec_dic = alias_dictionary(real_list(aliases),list(security_df.index), 0.45)
+        return security_df.loc[alias_list(sec_dic)].values
 
     def get_ranking_values(self, aliases):
         distance_values = []
         available_values = []
-        for neighborood in self.real_list(aliases):
+        for neighborood in real_list(aliases):
             for item in self.distance_ranking:
                 if item[0] == neighborood:
                     distance_values.append(item[1])
@@ -88,45 +89,12 @@ class Ranking:
         
         return distance_values, available_values
 
-    def alias_dictionary(self, a1, a2, treshold = 0.6):
-        aliases = {}
-        for nei in a1:
-            alias = String_conversion()
-            alias.text = nei
-            aliases[nei] = alias
-            for bar in a2:
-                distance = stringdist.levenshtein_norm(nei.lower(),bar.lower())
-                if distance < alias.value and distance <= treshold:
-                    alias.value = distance
-                    alias.text = bar
-                    aliases[nei] = alias                
-        return aliases   
 
-    def alias_list(self, aliases):
-        alias = []
-        for key in aliases:
-            if aliases[key].value < 1:
-                alias.append(aliases[key].text)
-        return alias
+    def appartments_locations(self, neighborhoods):
+        points = []
+        for key in self.aliases:
+            if key in neighborhoods:
+                points.extend(self.idealista.neighborhood_locations(self.aliases[key].text))
+        return points
 
-    def real_list(self, aliases):
-        real = []
-        for key in aliases:
-            if aliases[key].value < 1:
-                real.append(key)
-        return real
 
-    def alias_values(self, aliases):
-        for key in aliases:
-            if aliases[key].value >= 0:
-                print(key + ' ---- ' + aliases[key].text + ' ----- ' + str(aliases[key].value))
-
-    def show_in_map(self, neighborhoods):
-        geo_alias = self.alias_dictionary(neighborhoods,list(self.fc.get_values("N_Barri")))
-        return tl.FeatureCollection(barri for barri in self.fc if barri['N_Barri'] in self.alias_list(geo_alias))
-    
-    
-
-class String_conversion:
-    text = ''
-    value = 1

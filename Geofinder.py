@@ -68,3 +68,6 @@ class Geofinder:
             coordinates.append(self.get_cirlce_location(location, distance))
             distance -= 300
         return coordinates
+
+    def get_location(self):
+        return (self.location.point.longitude,self.location.point.latitude)
