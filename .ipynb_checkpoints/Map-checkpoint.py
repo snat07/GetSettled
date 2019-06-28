@@ -5,8 +5,10 @@ import telluric as tl
 from telluric.plotting import plot
 from Utils import alias_dictionary, alias_list
 import random
+import logging
 
 def draw_map(neighborhoods, points, location, title):
+    logging.info('This is an info message')
     fc = tl.FileCollection.open("../barris_geo.json")
     geo_alias = alias_dictionary(neighborhoods,list(fc.get_values("N_Barri")))
     fc = tl.FeatureCollection(barri for barri in fc if barri['N_Barri'] in alias_list(geo_alias))

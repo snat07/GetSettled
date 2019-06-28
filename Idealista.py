@@ -20,55 +20,59 @@ class Idealista:
     thumbnail = 'thumbnail'
     neighborhoods = {}
 
-    # def __init__(self):
-        #Getting credentials
-        # with open('../accounts.json') as json_file:
-        #     data = json.load(json_file)
+    def __init__(self):
+        # Getting credentials
+        with open('../accounts.json') as json_file:
+            data = json.load(json_file)
 
 
-        # self.apikey = data['accounts']['Idealista']['apikey']
-        # secret = data['accounts']['Idealista']['secret']
-        # access_token = ''
-        # token_type = ''
-        # encoded_string = self.apikey + ":" + secret
-        # encoded = base64.b64encode(encoded_string.encode())
+        self.apikey = data['accounts']['Idealista']['apikey']
+        secret = data['accounts']['Idealista']['secret']
+        access_token = ''
+        token_type = ''
+        encoded_string = self.apikey + ":" + secret
+        encoded = base64.b64encode(encoded_string.encode())
 
-        # r = requests.post('http://api.idealista.com/oauth/token',
-        #               headers={'Authorization': 'Basic ' + encoded.decode()},
-        #               params={'grant_type':'client_credentials'})
-        # access_token = r.json()['access_token']
-        # token_type = r.json()['token_type']
-        # self.search_authorization =  token_type + ' ' + access_token
+        r = requests.post('http://api.idealista.com/oauth/token',
+                      headers={'Authorization': 'Basic ' + encoded.decode()},
+                      params={'grant_type':'client_credentials'})
+        access_token = r.json()['access_token']
+        token_type = r.json()['token_type']
+        self.search_authorization =  token_type + ' ' + access_token
 
 
     def request_idealista(self, property_type, min_price, max_price, num_page=1):
-        # params = {
-        #     'locationId':'0-EU-ES-08-13-001-019',
-        #     'locale':'ca',
-        #     'maxItems':50,
-        #     'operation':'rent',
-        #     'propertyType':property_type,
-        #     'apikey':self.apikey,
-        #     'minPrince':min_price,
-        #     'maxPrice':max_price,
-        #     'numPage':num_page
-        # }
+        params = {
+            'locationId':'0-EU-ES-08-13-001-019',
+            'locale':'ca',
+            'maxItems':50,
+            'operation':'rent',
+            'propertyType':property_type,
+            'apikey':self.apikey,
+            'minPrince':min_price,
+            'maxPrice':max_price,
+            'numPage':num_page
+        }
         
-        # search = requests.post('https://api.idealista.com/3.5/es/search',
-        #                   headers={'Authorization': self.search_authorization},
-        #                   params=params)
+        search = requests.post('https://api.idealista.com/3.5/es/search',
+                          headers={'Authorization': self.search_authorization},
+                          params=params)
 
-        # with open('../Idealista_json/' + str(datetime.datetime.now().date()) + '_idealista_' + str(num_page) + '.json', 'w') as fp:
-        #     json.dump(search.json(), fp)
+        with open('../Idealista_json/' + str(datetime.datetime.now().date()) + '_idealista_' + str(num_page) + '.json', 'w') as fp:
+            json.dump(search.json(), fp)
+
+        return search.json().get('elementList')
+
+    def request_idealista_local(self, num_page):
         with open('../Idealista_json/2019-06-20_idealista_' + str(num_page) + '.json','r') as fp:
             d = json.load(fp)
             return d.get('elementList')
-        # return search.json().get('elementList')
-
     
     def load_homes(self, property_type='bedrooms', min_price=100, max_price=1500):
         for i in range(1,5):
+            print('Request Idealista page: {}'.format(i))
             homes = self.request_idealista(property_type, min_price, max_price, i)
+            print('Request Idealista page: {} success'.format(i))
             time.sleep(1)
             for home in homes:
                 if self.neighborhood in home:
